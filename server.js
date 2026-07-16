@@ -39,7 +39,6 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
     }
 });
 
-let mancheActive = true;
 let pseudoDuBuzzer = "";
 let indexImageActuelle = 0;
 
