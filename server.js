@@ -39,11 +39,23 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
     }
 });
 
-io.on('connection', (socket) => {
-    let listeJoueurs = []; // Liste temporaire (si tu veux réinjecter ton code de leaderboard)
+let mancheActive = true;
+let pseudoDuBuzzer = "";
+let indexImageActuelle = 0;
 
+let listeJoueurs = []; 
+
+io.on('connection', (socket) => {
+    console.log('Un utilisateur s’est connecté');
+
+    // 1. Quand un joueur entre son pseudo, on l'ajoute à la liste commune
     socket.on('nouveau_joueur', (data) => {
-        // Envoi de la liste actuelle si besoin
+        let joueurExiste = listeJoueurs.find(j => j.id === socket.id);
+        if (!joueurExiste) {
+            listeJoueurs.push({ id: socket.id, pseudo: data.pseudo, score: 0 });
+        }
+        // On envoie le classement mis à jour à TOUT LE MONDE
+        io.emit('mise_a_jour_leaderboard', listeJoueurs);
     });
 
     socket.on('clic_buzz', (data) => {
