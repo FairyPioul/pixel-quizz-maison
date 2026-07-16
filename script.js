@@ -19,7 +19,7 @@ let chrono;
 
 // VARIABLES DE PIXELLISATION
 let imgObj = new Image(); // On crée un objet Image en mémoire
-imgObj.src = "image/20220310210647_1.png"; // Ton image de départ
+imgObj.src = "pixel_quizz_game.png"; // Ton image de départ
 
 let echellePixellisation = 0.01; // 0.02 = l'image est dessinée à 2% de sa taille (très pixelisée)
 
