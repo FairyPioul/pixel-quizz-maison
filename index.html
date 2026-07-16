@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mon Pixel Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ÉCRAN DE CONNEXION (Affiché au début) -->
+    <div id="ecran-connexion">
+        <h1>Bienvenue au Pixel Quiz !</h1>
+        <p>Entre ton pseudo pour rejoindre la partie :</p>
+        <input type="text" id="input-pseudo" placeholder="Ton pseudo..." maxlength="15">
+        <br><br>
+        <button id="bouton-rejoindre">Rejoindre la partie ➔</button>
+    </div>
+
+    <!-- ÉCRAN DE JEU (Caché au début par le JavaScript) -->
+    <div id="ecran-jeu" style="display: none;">
+        <h1 id="titre-jeu">Le Pixel Quiz entre Amis !</h1>
+        
+        <!-- Zone d'affichage du score en bleu -->
+        <h2 id="affichage-score" style="color: #007BFF;">Mon Score : 0 point</h2> 
+        
+            <!-- On remplace la balise <img> par un <canvas> -->
+        <div class="image-container">
+            <canvas id="canvas-jeu" width="800" height="600"></canvas>
+        </div>
+
+        <br>
+        <!-- Ton bouton de buzz -->
+        <button id="bouton-buzz">BUZZER !</button>
+
+        <div id="zone-leaderboard" style="margin-top: 50px; background: #fff; padding: 15px; border-radius: 8px; border: 2px dashed #007BFF; display: inline-block; min-width: 250px;">
+            <h3 style="margin-top: 0; color: #333;">🏆 Classement des Joueurs</h3>
+            <ul id="liste-scores" style="list-style: none; padding: 0; margin: 0; font-size: 18px; text-align: left;">
+                <!-- Les scores des amis s'afficheront ici dynamiquement -->
+                <li style="color: #666; text-align: center;">En attente de joueurs...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Les scripts nécessaires au fonctionnement temps réel -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

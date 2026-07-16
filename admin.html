@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Console Admin - Pixel Quiz</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: white; padding: 50px; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; }
+        .btn-success { background-color: green; color: white; }
+        .btn-danger { background-color: red; color: white; }
+        .btn-next { background-color: blue; color: white; }
+        #status { font-size: 24px; margin: 20px; color: orange; }
+    </style>
+</head>
+<body>
+
+    <h1>Console Maître du Jeu 👑</h1>
+    
+    <div id="status">En attente d'un buzz...</div>
+
+<div id="controles" style="display: none;">
+        <!-- On remplace le bouton unique par 3 choix de points -->
+        <p>Attribuer des points :</p>
+        <button class="btn-success" id="btn-p1">+ 1 Point</button>
+        <button class="btn-success" id="btn-p2">+ 2 Points</button>
+        <button class="btn-success" id="btn-p3">+ 3 Points</button>
+        <br><br>
+        <button class="btn-danger" id="btn-incorrect">Mauvaise Réponse ✗</button>
+    </div>
+
+    <div style="margin: 30px auto; background: #333; padding: 15px; border-radius: 8px; display: inline-block;">
+        <h3>📁 Ajouter une nouvelle image</h3>
+        <input type="file" id="input-fichier" accept="image/*">
+        <button class="btn-next" id="btn-uploader" style="margin: 0; padding: 10px 20px;">Téléverser ➔</button>
+    </div>
+
+    <hr style="margin: 20px 0; border-color: #444;">
+    
+    <button class="btn-next" id="btn-next">Lancer l'image suivante ➔</button>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        console.log("Le script de l'admin est bien chargé !");
+
+        const socket = io();
+        const statusDiv = document.getElementById('status');
+        const controlesDiv = document.getElementById('controles');
+
+        socket.on('bloquer_jeu', (data) => {
+            statusDiv.innerText = data.quiAByzze + " a BUZZÉ !";
+            controlesDiv.style.display = "block";
+        });
+
+        // Fonction unique pour envoyer la bonne réponse avec le nombre de points choisi
+        function validerPoints(points) {
+            socket.emit('admin_decision', { juste: true, pointsAAccorder: points });
+            statusDiv.innerText = "Points accordés (+" + points + ") !";
+            controlesDiv.style.display = "none";
+        }
+
+        // Écoute des 3 nouveaux boutons
+        document.getElementById('btn-p1').addEventListener('click', () => validerPoints(1));
+        document.getElementById('btn-p2').addEventListener('click', () => validerPoints(2));
+        document.getElementById('btn-p3').addEventListener('click', () => validerPoints(3));
+
+        document.getElementById('btn-incorrect').addEventListener('click', () => {
+            socket.emit('admin_decision', { juste: false });
+            statusDiv.innerText = "Faux ! Le jeu relance.";
+            controlesDiv.style.display = "none";
+        });
+
+        document.getElementById('btn-next').addEventListener('click', () => {
+            socket.emit('admin_next');
+            statusDiv.innerText = "En attente d'un buzz...";
+            controlesDiv.style.display = "none";
+        });
+document.getElementById('btn-uploader').addEventListener('click', () => {
+            const selecteurFichier = document.getElementById('input-fichier');
+            if (selecteurFichier.files.length === 0) {
+                alert("Sélectionne d'abord une image !");
+                return;
+            }
+
+            const formulaireDonnees = new FormData();
+            formulaireDonnees.append('imageQuiz', selecteurFichier.files[0]);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formulaireDonnees
+            })
+            .then(reponse => reponse.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Image téléversée avec succès ! Clique sur 'Image suivante' pour la lancer.");
+                    selecteurFichier.value = ""; 
+                } else {
+                    alert("Erreur lors de l'envoi.");
+                }
+            })
+            .catch(err => console.error("Erreur d'upload :", err));
+        });
+    </script>
+</body>
+</html>

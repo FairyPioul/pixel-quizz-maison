@@ -1,0 +1,59 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f0f0f0;
+}
+
+.image-container {
+    margin: 20px auto;
+    width: 600px;
+    height: 400px;
+    overflow: hidden;
+    border: 5px solid #333;
+}
+
+img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* On commence avec un gros flou de 30 pixels */
+    filter: blur(30px); 
+    transition: filter 0.1s linear;
+}
+
+#bouton-buzz {
+    padding: 20px 40px;
+    font-size: 24px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+#ecran-connexion {
+    margin-top: 100px;
+}
+#input-pseudo {
+    padding: 10px;
+    font-size: 18px;
+    border-radius: 5px;
+    border: 2px solid #333;
+}
+#bouton-rejoindre {
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Cette ligne magique empêche le navigateur de lisser les pixels lors de l'agrandissement */
+    image-rendering: pixelated; 
+}
