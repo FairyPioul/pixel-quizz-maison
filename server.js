@@ -19,12 +19,16 @@ const stockage = multer.diskStorage({
 });
 const upload = multer({ storage: stockage });
 
+// ========================================================
+// VARIABLES GLOBALES (DÉCLARÉES UNE SEULE FOIS)
+// ========================================================
 let mancheActive = true;
 let pseudoDuBuzzer = "";
+let indexImageActuelle = 0;
+let listeJoueurs = []; 
 
 // Liste dynamique des images disponibles (on commence avec ton image actuelle)
 let listeImagesServeur = ["image/20220310210647_1.png"];
-let indexImageActuelle = 0;
 
 // Route HTTP POST pour recevoir le fichier depuis l'admin
 app.post('/upload', upload.single('imageQuiz'), (req, res) => {
@@ -39,11 +43,9 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
     }
 });
 
-let pseudoDuBuzzer = "";
-let indexImageActuelle = 0;
-
-let listeJoueurs = []; 
-
+// ========================================================
+// GESTION DES SOCKETS (CONNEXIONS TEMPS RÉEL)
+// ========================================================
 io.on('connection', (socket) => {
     console.log('Un utilisateur s’est connecté');
 
@@ -91,6 +93,7 @@ io.on('connection', (socket) => {
         io.emit('prochaine_image', { URLImage: prochaineImage });
     });
 });
+
 // On récupère le port donné par internet, ou 3000 si on joue en local
 const PORT = process.env.PORT || 3000;
 
