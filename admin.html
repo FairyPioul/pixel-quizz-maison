@@ -2,79 +2,214 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Console Admin - Pixel Quiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Admin - Pixel Quizz</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: white; padding: 50px; }
-        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; }
-        .btn-success { background-color: green; color: white; }
-        .btn-danger { background-color: red; color: white; }
-        .btn-next { background-color: blue; color: white; }
-        #status { font-size: 24px; margin: 20px; color: orange; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container-admin {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .panneau {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            flex: 1;
+            min-width: 300px;
+        }
+        .image-container {
+            width: 100%;
+            max-width: 500px;
+            height: 350px;
+            margin: 0 auto 15px auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: pixelated;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: 0.2s;
+        }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-next { background-color: #007bff; color: white; width: 100%; max-width: 300px; margin-top: 15px; }
+        button:disabled { background-color: #555 !important; cursor: not-allowed; }
+        #status {
+            font-size: 20px;
+            color: #ffc107;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        ul { list-style: none; padding: 0; text-align: left; max-width: 250px; margin: 0 auto; }
     </style>
 </head>
 <body>
 
-    <h1>Console Maître du Jeu 👑</h1>
-    
+    <h1>👑 Console Administrateur</h1>
     <div id="status">En attente d'un buzz...</div>
 
-<div id="controles" style="display: none;">
-        <!-- On remplace le bouton unique par 3 choix de points -->
-        <p>Attribuer des points :</p>
-        <button class="btn-success" id="btn-p1">+ 1 Point</button>
-        <button class="btn-success" id="btn-p2">+ 2 Points</button>
-        <button class="btn-success" id="btn-p3">+ 3 Points</button>
-        <br><br>
-        <button class="btn-danger" id="btn-incorrect">Mauvaise Réponse ✗</button>
+    <div class="container-admin">
+        
+        <!-- PANNEAU GAUCHE : VUE DU JEU EN DIRECT -->
+        <div class="panneau">
+            <h3>📺 Retour Écran (En direct)</h3>
+            <div class="image-container">
+                <canvas id="canvas-admin" width="800" height="600"></canvas>
+            </div>
+            
+            <div id="controles" style="display: none;">
+                <p>Attribuer des points au joueur qui a buzzé :</p>
+                <button class="btn-success" id="btn-p1">+ 1 Point</button>
+                <button class="btn-success" id="btn-p2">+ 2 Points</button>
+                <button class="btn-success" id="btn-p3">+ 3 Points</button>
+                <br><br>
+                <button class="btn-danger" id="btn-incorrect">Mauvaise Réponse ✗</button>
+            </div>
+            
+            <button class="btn-next" id="btn-next">Lancer l'image suivante ➔</button>
+        </div>
+
+        <!-- PANNEAU DROITE : LEADERBOARD & UPLOAD -->
+        <div class="panneau">
+            <h3>📊 Classement des Joueurs</h3>
+            <ul id="liste-scores-admin"></ul>
+
+            <hr style="margin: 30px 0; border-color: #444;">
+
+            <h3>📁 Ajouter une nouvelle image</h3>
+            <input type="file" id="input-fichier" accept="image/*">
+            <br><br>
+            <button class="btn-success" id="btn-uploader" style="margin:0;">Téléverser ➔</button>
+        </div>
+
     </div>
 
-    <div style="margin: 30px auto; background: #333; padding: 15px; border-radius: 8px; display: inline-block;">
-        <h3>📁 Ajouter une nouvelle image</h3>
-        <input type="file" id="input-fichier" accept="image/*">
-        <button class="btn-next" id="btn-uploader" style="margin: 0; padding: 10px 20px;">Téléverser ➔</button>
-    </div>
-
-    <hr style="margin: 20px 0; border-color: #444;">
-    
-    <button class="btn-next" id="btn-next">Lancer l'image suivante ➔</button>
-    
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        console.log("Le script de l'admin est bien chargé !");
-
         const socket = io();
         const statusDiv = document.getElementById('status');
         const controlesDiv = document.getElementById('controles');
+        const listeScoresUI = document.getElementById('liste-scores-admin');
 
+        // CANVAS POUR LA SYNC DE PIXELLISATION
+        const canvas = document.getElementById('canvas-admin');
+        const ctx = canvas.getContext('2d');
+        let imgObj = new Image();
+        imgObj.src = "image/20220310210647_1.png"; // Image de départ par défaut
+
+        let echellePixellisation = 0.02;
+        let chrono;
+
+        function dessinerImagePixelisee() {
+            let w = canvas.width * echellePixellisation;
+            let h = canvas.height * echellePixellisation;
+            ctx.drawImage(imgObj, 0, 0, w, h);
+            ctx.drawImage(canvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+        }
+
+        function démarrerChrono() {
+            clearInterval(chrono);
+            chrono = setInterval(function() {
+                echellePixellisation = echellePixellisation + 0.005;
+                dessinerImagePixelisee();
+
+                if (echellePixellisation >= 1) {
+                    clearInterval(chrono);
+                    ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height);
+                }
+            }, 100);
+        }
+
+        // ÉCOUTE DES ÉVÉNEMENTS DU JEU
         socket.on('bloquer_jeu', (data) => {
-            statusDiv.innerText = data.quiAByzze + " a BUZZÉ !";
+            clearInterval(chrono); // On arrête la pixellisation au moment du buzz
+            statusDiv.innerText = data.quiAByzze.toUpperCase() + " A BUZZÉ !";
             controlesDiv.style.display = "block";
         });
 
-        // Fonction unique pour envoyer la bonne réponse avec le nombre de points choisi
+        socket.on('reponse_validee', (data) => {
+            if (data.action === 'reveler') {
+                clearInterval(chrono);
+                echellePixellisation = 1;
+                ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // Révèle l'image nette
+                statusDiv.innerText = "Manche terminée. Gagnant : " + data.gagnant;
+                controlesDiv.style.display = "none";
+            } else if (data.action === 'relancer') {
+                statusDiv.innerText = "Jeu relancé... En attente d'un buzz...";
+                controlesDiv.style.display = "none";
+                démarrerChrono(); // On reprend la dépixelisation
+            }
+        });
+
+        socket.on('prochaine_image', function(data) {
+            clearInterval(chrono);
+            echellePixellisation = 0.02;
+            imgObj.src = data.URLImage; 
+            statusDiv.innerText = "Nouvelle image en cours... En attente d'un buzz...";
+            controlesDiv.style.display = "none";
+            
+            imgObj.onload = function() {
+                démarrerChrono();
+            };
+        });
+
+        // RECEPTION ET AFFICHAGE DU CLASSEMENT CHEZ L'ADMIN
+        socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
+            listeScoresUI.innerHTML = "";
+            tableauJoueurs.sort((a, b) => b.score - a.score);
+            tableauJoueurs.forEach((joueur, index) => {
+                const item = document.createElement('li');
+                item.style.padding = "5px 0";
+                item.style.borderBottom = "1px solid #444";
+                item.innerHTML = "<strong>#" + (index + 1) + "</strong>. " + joueur.pseudo + " : " + joueur.score + " pts";
+                listeScoresUI.appendChild(item);
+            });
+        });
+
+        // ACTIONS DES BOUTONS DE CONTRÔLE
         function validerPoints(points) {
             socket.emit('admin_decision', { juste: true, pointsAAccorder: points });
-            statusDiv.innerText = "Points accordés (+" + points + ") !";
             controlesDiv.style.display = "none";
         }
 
-        // Écoute des 3 nouveaux boutons
         document.getElementById('btn-p1').addEventListener('click', () => validerPoints(1));
         document.getElementById('btn-p2').addEventListener('click', () => validerPoints(2));
         document.getElementById('btn-p3').addEventListener('click', () => validerPoints(3));
 
         document.getElementById('btn-incorrect').addEventListener('click', () => {
             socket.emit('admin_decision', { juste: false });
-            statusDiv.innerText = "Faux ! Le jeu relance.";
             controlesDiv.style.display = "none";
         });
 
         document.getElementById('btn-next').addEventListener('click', () => {
             socket.emit('admin_next');
-            statusDiv.innerText = "En attente d'un buzz...";
-            controlesDiv.style.display = "none";
         });
-document.getElementById('btn-uploader').addEventListener('click', () => {
+
+        // TÉLÉVERSEMENT D'IMAGE
+        document.getElementById('btn-uploader').addEventListener('click', () => {
             const selecteurFichier = document.getElementById('input-fichier');
             if (selecteurFichier.files.length === 0) {
                 alert("Sélectionne d'abord une image !");
@@ -91,7 +226,7 @@ document.getElementById('btn-uploader').addEventListener('click', () => {
             .then(reponse => reponse.json())
             .then(data => {
                 if (data.success) {
-                    alert("Image téléversée avec succès ! Clique sur 'Image suivante' pour la lancer.");
+                    alert("Image téléversée avec succès !");
                     selecteurFichier.value = ""; 
                 } else {
                     alert("Erreur lors de l'envoi.");
@@ -99,6 +234,11 @@ document.getElementById('btn-uploader').addEventListener('click', () => {
             })
             .catch(err => console.error("Erreur d'upload :", err));
         });
+
+        // Lancement initial de la pixellisation de la première image au chargement
+        imgObj.onload = function() {
+            dessinerImagePixelisee();
+        };
     </script>
 </body>
 </html>
