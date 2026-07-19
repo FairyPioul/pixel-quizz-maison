@@ -48,7 +48,8 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
 // ========================================================
 io.on('connection', (socket) => {
     console.log('Un utilisateur s’est connecté');
-
+// AJOUT : On envoie le classement actuel dès que quelqu'un (Joueur ou Admin) se connecte
+    socket.emit('mise_a_jour_leaderboard', listeJoueurs);
     // 1. Quand un joueur entre son pseudo, on l'ajoute à la liste commune
     socket.on('nouveau_joueur', (data) => {
         let joueurExiste = listeJoueurs.find(j => j.id === socket.id);
@@ -67,9 +68,19 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('admin_decision', (data) => {
+socket.on('admin_decision', (data) => {
         if (data.juste) {
+            // On cherche le joueur qui a buzzé pour lui ajouter ses points sur le serveur
+            let joueurGagnant = listeJoueurs.find(j => j.pseudo === pseudoDuBuzzer);
+            if (joueurGagnant) {
+                joueurGagnant.score += data.pointsAAccorder;
+            }
+            
+            // On prévient tout le monde de révéler l'image
             io.emit('reponse_validee', { action: 'reveler', gagnant: pseudoDuBuzzer, points: data.pointsAAccorder });
+            
+            // On met à jour le leaderboard chez TOUT LE MONDE (y compris l'admin !)
+            io.emit('mise_a_jour_leaderboard', listeJoueurs);
         } else {
             mancheActive = true;
             io.emit('reponse_validee', { action: 'relancer' });
