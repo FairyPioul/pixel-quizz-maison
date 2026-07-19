@@ -59,6 +59,10 @@ io.on('connection', (socket) => {
         // On envoie le classement mis à jour à TOUT LE MONDE
         io.emit('mise_a_jour_leaderboard', listeJoueurs);
     });
+    
+    socket.on('changement_reglages', (data) => {
+        socket.broadcast.emit('maj_reglages_joueurs', data);
+    });
 
     socket.on('clic_buzz', (data) => {
         if (mancheActive) {
