@@ -42,7 +42,7 @@
 
         /* ADAPTATION DE LA ZONE DE CLASSEMENT SUR LE FOND FONCÉ */
         #zone-leaderboard {
-            margin-top: 50px; 
+            margin-top: 30px; 
             background: rgba(255, 255, 255, 0.1) !important; /* Boite transparente */
             padding: 15px; 
             border-radius: 8px; 
@@ -94,16 +94,17 @@
         <!-- Zone d'affichage du score en bleu néon -->
         <h2 id="affichage-score" style="color: #38b6ff; text-shadow: 0 0 10px rgba(56,182,255,0.4);">Mon Score : 0 point</h2> 
         
-        <!-- Conteneur d'affichage dynamique du jeu -->
+        <!-- 1. IMAGE (Canvas) -->
         <div class="image-container">
             <canvas id="canvas-jeu" width="800" height="600"></canvas>
         </div>
 
-        <br>
-        <!-- Bouton de buzz principal -->
-        <button id="bouton-buzz">BUZZER !</button>
+        <!-- 2. LE BUZZER (Placé ici avec un espacement propre) -->
+        <div style="margin: 25px 0;">
+            <button id="bouton-buzz">BUZZER !</button>
+        </div>
 
-        <!-- Section de retour des scores en direct -->
+        <!-- 3. CLASSEMENT (Tout en bas) -->
         <div id="zone-leaderboard">
             <h3>🏆 Classement des Joueurs</h3>
             <ul id="liste-scores" style="list-style: none; padding: 0; margin: 0; font-size: 18px; text-align: left;">
