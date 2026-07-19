@@ -17,11 +17,15 @@ let monPseudo = "";
 let monScore = 0; 
 let chrono;
 
-// VARIABLES DE PIXELLISATION
-let imgObj = new Image(); // On crée un objet Image en mémoire
-imgObj.src = "pixel_quizz_game.png"; // Ton image de départ
+// ========================================================
+// VARIABLES DE PIXELLISATION DYNAMIQUE (GÉRÉES PAR L'ADMIN)
+// ========================================================
+let imgObj = new Image(); 
+imgObj.src = "image/20220310210647_1.png"; // Ton image de départ par défaut
 
-let echellePixellisation = 0.01; // 0.02 = l'image est dessinée à 2% de sa taille (très pixelisée)
+let echellePixellisation = 0.02; 
+let vitesseDepixellisation = 0.005; // Taux ajouté toutes les 100ms
+let pixelDepart = 0.02;            // Valeur initiale de la manche
 
 boutonRejoindre.addEventListener('click', function() {
     monPseudo = inputPseudo.value.trim();
@@ -56,9 +60,10 @@ function dessinerImagePixelisee() {
 }
 
 function démarrerChrono() {
+    clearInterval(chrono);
     chrono = setInterval(function() {
-        // On augmente progressivement la taille du dessin (rend l'image de moins en moins pixelisée)
-        echellePixellisation = echellePixellisation + 0.001;
+        // On augmente progressivement la taille selon le réglage de l'admin
+        echellePixellisation = echellePixellisation + vitesseDepixellisation;
         
         dessinerImagePixelisee();
 
@@ -82,6 +87,7 @@ socket.on('bloquer_jeu', function(data) {
 
 socket.on('reponse_validee', function(data) {
     if (data.action === 'reveler') {
+        clearInterval(chrono);
         echellePixellisation = 1;
         ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // On révèle l'image nette
         
@@ -105,9 +111,11 @@ socket.on('reponse_validee', function(data) {
 socket.on('prochaine_image', function(data) {
     console.log("JOUEUR : Le serveur me dit de passer à l'image suivante :", data.URLImage);
     clearInterval(chrono);
-    echellePixellisation = 0.02; // Réinitialise les gros pixels
     
-    // ON APPLIQUE LA VRAIE IMAGE ENVOYÉE PAR LE SERVEUR :
+    // Reprend la valeur définie par l'admin au lieu d'un chiffre fixe
+    echellePixellisation = pixelDepart; 
+    
+    // ON APPLIQUE LA VRAIE IMAGE ENVOYÉE PAR LE SERVEUR
     imgObj.src = data.URLImage; 
     
     boutonBuzz.innerText = "BUZZER !";
@@ -130,4 +138,13 @@ socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
         if (joueur.pseudo === monPseudo) item.style.color = "#007BFF";
         listeScoresUI.appendChild(item);
     });
+});
+
+// ========================================================
+// RECEPTION DES RÉGLAGES DE L'ADMIN EN TEMPS RÉEL
+// ========================================================
+socket.on('maj_reglages_joueurs', function(data) {
+    pixelDepart = data.pixelDepart;
+    vitesseDepixellisation = data.vitesse;
+    console.log("🛠️ Configuration reçue : Départ à", pixelDepart, " Vitesse à", vitesseDepixellisation);
 });
