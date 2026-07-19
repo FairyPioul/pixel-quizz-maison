@@ -4,6 +4,77 @@
     <meta charset="UTF-8">
     <title>Pixel Quiz</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* CONFIGURATION DU FOND VISUEL */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url('image/fond.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: white;
+            text-align: center;
+        }
+
+        /* EFFET TRANSPARENT ET FLAU POUR LES ÉCRANS DE CONFIGURATION */
+        #ecran-connexion, #ecran-jeu {
+            background-color: rgba(20, 30, 45, 0.85); /* Fond sombre transparent */
+            backdrop-filter: blur(5px);               /* Léger flou artistique à l'arrière */
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #ecran-connexion {
+            max-width: 450px;
+            margin-top: 10% !important;
+        }
+
+        /* BOÎTE DU TITRE DU JEU */
+        h1 {
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        /* ADAPTATION DE LA ZONE DE CLASSEMENT SUR LE FOND FONCÉ */
+        #zone-leaderboard {
+            margin-top: 50px; 
+            background: rgba(255, 255, 255, 0.1) !important; /* Boite transparente */
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 2px dashed #007BFF !important; 
+            display: inline-block; 
+            min-width: 280px;
+        }
+
+        #zone-leaderboard h3 {
+            margin-top: 0; 
+            color: #ffc107 !important; /* Jaune doré pour le titre du podium */
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        /* CONTENEUR DU CANVAS */
+        .image-container {
+            width: 100%;
+            max-width: 650px;
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            image-rendering: pixelated;
+        }
+    </style>
 </head>
 <body>
 
@@ -20,23 +91,24 @@
     <div id="ecran-jeu" style="display: none;">
         <h1 id="titre-jeu">Le Fairy's Dantesque Pixel quizz !</h1>
         
-        <!-- Zone d'affichage du score en bleu -->
-        <h2 id="affichage-score" style="color: #007BFF;">Mon Score : 0 point</h2> 
+        <!-- Zone d'affichage du score en bleu néon -->
+        <h2 id="affichage-score" style="color: #38b6ff; text-shadow: 0 0 10px rgba(56,182,255,0.4);">Mon Score : 0 point</h2> 
         
-            <!-- On remplace la balise <img> par un <canvas> -->
+        <!-- Conteneur d'affichage dynamique du jeu -->
         <div class="image-container">
             <canvas id="canvas-jeu" width="800" height="600"></canvas>
         </div>
 
         <br>
-        <!-- Ton bouton de buzz -->
+        <!-- Bouton de buzz principal -->
         <button id="bouton-buzz">BUZZER !</button>
 
-        <div id="zone-leaderboard" style="margin-top: 50px; background: #fff; padding: 15px; border-radius: 8px; border: 2px dashed #007BFF; display: inline-block; min-width: 250px;">
-            <h3 style="margin-top: 0; color: #333;">🏆 Classement des Joueurs</h3>
+        <!-- Section de retour des scores en direct -->
+        <div id="zone-leaderboard">
+            <h3>🏆 Classement des Joueurs</h3>
             <ul id="liste-scores" style="list-style: none; padding: 0; margin: 0; font-size: 18px; text-align: left;">
                 <!-- Les scores des amis s'afficheront ici dynamiquement -->
-                <li style="color: #666; text-align: center;">En attente de joueurs...</li>
+                <li style="color: #bbb; text-align: center;">En attente de joueurs...</li>
             </ul>
         </div>
     </div>
