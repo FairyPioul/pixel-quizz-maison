@@ -27,6 +27,7 @@
             border-radius: 10px;
             flex: 1;
             min-width: 300px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         .image-container {
             width: 100%;
@@ -36,6 +37,7 @@
             background: #000;
             border-radius: 8px;
             overflow: hidden;
+            border: 2px solid #444;
         }
         canvas {
             width: 100%;
@@ -54,16 +56,48 @@
             transition: 0.2s;
         }
         .btn-success { background-color: #28a745; color: white; }
+        .btn-success:hover { background-color: #218838; }
         .btn-danger { background-color: #dc3545; color: white; }
+        .btn-danger:hover { background-color: #c82333; }
         .btn-next { background-color: #007bff; color: white; width: 100%; max-width: 300px; margin-top: 15px; }
+        .btn-next:hover { background-color: #0069d9; }
         button:disabled { background-color: #555 !important; cursor: not-allowed; }
+        
         #status {
-            font-size: 20px;
+            font-size: 22px;
             color: #ffc107;
-            margin: 15px 0;
+            margin: 15px 0 25px 0;
             font-weight: bold;
+            text-transform: uppercase;
+            background: #333;
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
         }
-        ul { list-style: none; padding: 0; text-align: left; max-width: 250px; margin: 0 auto; }
+        ul { list-style: none; padding: 0; text-align: left; max-width: 280px; margin: 0 auto; }
+        
+        .reglages-box {
+            background: #333; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            text-align: left;
+            border: 1px solid #444;
+        }
+        .reglages-box label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .reglages-box span {
+            color: #ffc107;
+            font-weight: bold;
+            float: right;
+        }
+        .slider-custom {
+            width: 100%; 
+            margin: 8px 0 4px 0;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -73,15 +107,28 @@
 
     <div class="container-admin">
         
-        <!-- PANNEAU GAUCHE : VUE DU JEU EN DIRECT -->
+        <!-- PANNEAU GAUCHE : VUE DU JEU EN DIRECT & RÉGLAGES -->
         <div class="panneau">
             <h3>📺 Retour Écran (En direct)</h3>
+            
+            <div class="reglages-box">
+                <h4 style="margin: 0 0 12px 0; text-align: center; color: #ffc107; text-transform: uppercase; font-size: 14px;">⚙️ Réglages de la Manche</h4>
+                
+                <label for="slider-depart">🎨 Gros pixels de départ : <span id="val-depart">0.02</span></label>
+                <input type="range" id="slider-depart" min="0.005" max="0.08" step="0.005" value="0.02" class="slider-custom">
+                <small style="color: #aaa; display:block; margin-bottom: 12px;">(Plus le chiffre est bas, plus c'est difficile au début)</small>
+                
+                <label for="slider-vitesse">⚡ Vitesse de dépixelisation : <span id="val-vitesse">0.005</span></label>
+                <input type="range" id="slider-vitesse" min="0.001" max="0.02" step="0.001" value="0.005" class="slider-custom">
+                <small style="color: #aaa; display:block;">(Taux de netteté ajouté toutes les 100ms)</small>
+            </div>
+
             <div class="image-container">
                 <canvas id="canvas-admin" width="800" height="600"></canvas>
             </div>
             
             <div id="controles" style="display: none;">
-                <p>Attribuer des points au joueur qui a buzzé :</p>
+                <p style="font-weight: bold; color: #ffc107;">Attribuer des points au joueur qui a buzzé :</p>
                 <button class="btn-success" id="btn-p1">+ 1 Point</button>
                 <button class="btn-success" id="btn-p2">+ 2 Points</button>
                 <button class="btn-success" id="btn-p3">+ 3 Points</button>
@@ -97,12 +144,13 @@
             <h3>📊 Classement des Joueurs</h3>
             <ul id="liste-scores-admin"></ul>
 
-            <hr style="margin: 30px 0; border-color: #444;">
+            <hr style="margin: 35px 0; border-color: #444;">
 
             <h3>📁 Ajouter une nouvelle image</h3>
-            <input type="file" id="input-fichier" accept="image/*">
+            <p style="font-size: 14px; color: #aaa; margin-bottom: 15px;">Sélectionne un fichier image (.png, .jpg) pour l'ajouter à la file d'attente du quiz.</p>
+            <input type="file" id="input-fichier" accept="image/*" style="margin-bottom: 10px;">
             <br><br>
-            <button class="btn-success" id="btn-uploader" style="margin:0;">Téléverser ➔</button>
+            <button class="btn-success" id="btn-uploader" style="margin:0; width: 100%; max-width: 200px;">Téléverser ➔</button>
         </div>
 
     </div>
@@ -114,14 +162,33 @@
         const controlesDiv = document.getElementById('controles');
         const listeScoresUI = document.getElementById('liste-scores-admin');
 
-        // CANVAS POUR LA SYNC DE PIXELLISATION
+        // CANVAS POUR LA CONFIGURATION DU LOGICIEL DE PIXELLISATION
         const canvas = document.getElementById('canvas-admin');
         const ctx = canvas.getContext('2d');
         let imgObj = new Image();
         imgObj.src = "image/20220310210647_1.png"; // Image de départ par défaut
 
+        // Variables de configuration dynamiques
         let echellePixellisation = 0.02;
+        let vitesseDepixellisation = 0.005;
+        let pixelDepart = 0.02;
         let chrono;
+
+        // Gestion des écouteurs pour envoyer les changements de curseurs
+        const sliderDepart = document.getElementById('slider-depart');
+        const sliderVitesse = document.getElementById('slider-vitesse');
+
+        sliderDepart.addEventListener('input', (e) => {
+            pixelDepart = parseFloat(e.target.value);
+            document.getElementById('val-depart').innerText = pixelDepart;
+            socket.emit('changement_reglages', { pixelDepart: pixelDepart, vitesse: vitesseDepixellisation });
+        });
+
+        sliderVitesse.addEventListener('input', (e) => {
+            vitesseDepixellisation = parseFloat(e.target.value);
+            document.getElementById('val-vitesse').innerText = vitesseDepixellisation;
+            socket.emit('changement_reglages', { pixelDepart: pixelDepart, vitesse: vitesseDepixellisation });
+        });
 
         function dessinerImagePixelisee() {
             let w = canvas.width * echellePixellisation;
@@ -133,7 +200,7 @@
         function démarrerChrono() {
             clearInterval(chrono);
             chrono = setInterval(function() {
-                echellePixellisation = echellePixellisation + 0.005;
+                echellePixellisation = echellePixellisation + vitesseDepixellisation;
                 dessinerImagePixelisee();
 
                 if (echellePixellisation >= 1) {
@@ -143,10 +210,10 @@
             }, 100);
         }
 
-        // ÉCOUTE DES ÉVÉNEMENTS DU JEU
+        // ÉCOUTE DES ÉVÉNEMENTS DU SERVEUR
         socket.on('bloquer_jeu', (data) => {
-            clearInterval(chrono); // On arrête la pixellisation au moment du buzz
-            statusDiv.innerText = data.quiAByzze.toUpperCase() + " A BUZZÉ !";
+            clearInterval(chrono); // On fige l'image au moment du buzz
+            statusDiv.innerText = data.quiAByzze + " A BUZZÉ !";
             controlesDiv.style.display = "block";
         });
 
@@ -154,21 +221,21 @@
             if (data.action === 'reveler') {
                 clearInterval(chrono);
                 echellePixellisation = 1;
-                ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // Révèle l'image nette
-                statusDiv.innerText = "Manche terminée. Gagnant : " + data.gagnant;
+                ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // Découvre l'image nette
+                statusDiv.innerText = "Manche validée !";
                 controlesDiv.style.display = "none";
             } else if (data.action === 'relancer') {
-                statusDiv.innerText = "Jeu relancé... En attente d'un buzz...";
+                statusDiv.innerText = "Faux ! Le jeu relance...";
                 controlesDiv.style.display = "none";
-                démarrerChrono(); // On reprend la dépixelisation
+                démarrerChrono(); // Relance la dépixelisation
             }
         });
 
         socket.on('prochaine_image', function(data) {
             clearInterval(chrono);
-            echellePixellisation = 0.02;
+            echellePixellisation = pixelDepart; // Se réinitialise avec la valeur choisie sur le curseur
             imgObj.src = data.URLImage; 
-            statusDiv.innerText = "Nouvelle image en cours... En attente d'un buzz...";
+            statusDiv.innerText = "En attente d'un buzz...";
             controlesDiv.style.display = "none";
             
             imgObj.onload = function() {
@@ -176,20 +243,20 @@
             };
         });
 
-        // RECEPTION ET AFFICHAGE DU CLASSEMENT CHEZ L'ADMIN
+        // RECEPTION ET AFFICHAGE DU CLASSEMENT DES JOUEURS
         socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
             listeScoresUI.innerHTML = "";
             tableauJoueurs.sort((a, b) => b.score - a.score);
             tableauJoueurs.forEach((joueur, index) => {
                 const item = document.createElement('li');
-                item.style.padding = "5px 0";
+                item.style.padding = "8px 0";
                 item.style.borderBottom = "1px solid #444";
-                item.innerHTML = "<strong>#" + (index + 1) + "</strong>. " + joueur.pseudo + " : " + joueur.score + " pts";
+                item.innerHTML = "<span style='color:#ffc107; font-weight:bold;'>#" + (index + 1) + "</span> " + joueur.pseudo + " : " + joueur.score + " pts";
                 listeScoresUI.appendChild(item);
             });
         });
 
-        // ACTIONS DES BOUTONS DE CONTRÔLE
+        // ACTIONS SUR LES ACTIONS DE VALIDATION
         function validerPoints(points) {
             socket.emit('admin_decision', { juste: true, pointsAAccorder: points });
             controlesDiv.style.display = "none";
@@ -208,7 +275,7 @@
             socket.emit('admin_next');
         });
 
-        // TÉLÉVERSEMENT D'IMAGE
+        // ENVOI DU FICHIER AU SERVEUR (TÉLÉVERSEMENT)
         document.getElementById('btn-uploader').addEventListener('click', () => {
             const selecteurFichier = document.getElementById('input-fichier');
             if (selecteurFichier.files.length === 0) {
@@ -235,7 +302,7 @@
             .catch(err => console.error("Erreur d'upload :", err));
         });
 
-        // Lancement initial de la pixellisation de la première image au chargement
+        // Premier dessin de l'image d'accueil par défaut
         imgObj.onload = function() {
             dessinerImagePixelisee();
         };
