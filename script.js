@@ -21,27 +21,42 @@ let chrono;
 // VARIABLES DE PIXELLISATION DYNAMIQUE (GÉRÉES PAR L'ADMIN)
 // ========================================================
 let imgObj = new Image(); 
-imgObj.src = "image/20220310210647_1.png"; // Ton image de départ par défaut
+imgObj.src = "image/20220310210647_1.png"; // Image de départ par défaut
 
 let echellePixellisation = 0.02; 
 let vitesseDepixellisation = 0.005; // Taux ajouté toutes les 100ms
 let pixelDepart = 0.02;            // Valeur initiale de la manche
 
+// ========================================================
+// RECONNEXION AUTOMATIQUE (LOCALSTORAGE)
+// ========================================================
+const pseudoSauvegarde = localStorage.getItem('pixel_quiz_pseudo');
+
+if (pseudoSauvegarde) {
+    monPseudo = pseudoSauvegarde;
+    ecranConnexion.style.display = "none";
+    ecranJeu.style.display = "block";
+    
+    // Signale au serveur la reconnexion du joueur
+    socket.emit('nouveau_joueur', { pseudo: monPseudo });
+    
+    if (imgObj.complete) démarrerChrono();
+    imgObj.onload = function() { démarrerChrono(); };
+}
+
 boutonRejoindre.addEventListener('click', function() {
     monPseudo = inputPseudo.value.trim();
     if (monPseudo !== "") {
+        // Enregistre le pseudo dans le navigateur
+        localStorage.setItem('pixel_quiz_pseudo', monPseudo);
+
         ecranConnexion.style.display = "none";
         ecranJeu.style.display = "block";
         
         socket.emit('nouveau_joueur', { pseudo: monPseudo });
         
-        // On attend que l'image soit bien chargée avant de lancer le chrono
-        imgObj.onload = function() {
-            démarrerChrono();
-        };
-        // Si l'image est déjà chargée par le navigateur
+        imgObj.onload = function() { démarrerChrono(); };
         if (imgObj.complete) démarrerChrono();
-        
     } else {
         alert("S'il te plaît, entre un pseudo valide !");
     }
@@ -52,17 +67,17 @@ function dessinerImagePixelisee() {
     let w = canvas.width * echellePixellisation;
     let h = canvas.height * echellePixellisation;
 
-    // Étape 1 : On dessine l'image en tout petit dans un coin du canvas
+    // Étape 1 : Dessin miniature dans le coin
     ctx.drawImage(imgObj, 0, 0, w, h);
 
-    // Étape 2 : On prend ce petit carré et on l'étire sur tout le canvas
+    // Étape 2 : Étirement sur l'ensemble du canvas
     ctx.drawImage(canvas, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
 }
 
 function démarrerChrono() {
     clearInterval(chrono);
     chrono = setInterval(function() {
-        // On augmente progressivement la taille selon le réglage de l'admin
+        // Augmentation progressive selon le réglage de l'admin
         echellePixellisation = echellePixellisation + vitesseDepixellisation;
         
         dessinerImagePixelisee();
@@ -101,9 +116,31 @@ socket.on('reponse_validee', function(data) {
             boutonBuzz.style.backgroundColor = "#555";
         }
     } else if (data.action === 'relancer') {
-        boutonBuzz.innerText = "BUZZER !";
-        boutonBuzz.style.backgroundColor = "red";
-        boutonBuzz.disabled = false;
+        // GESTION DE LA PÉNALITÉ SI LE JOUEUR S'EST TROMPÉ
+        if (data.perdant === monPseudo) {
+            boutonBuzz.disabled = true;
+            boutonBuzz.style.backgroundColor = "#777";
+            
+            let tempsRestant = 2;
+            boutonBuzz.innerText = "PÉNALITÉ... (" + tempsRestant + "s)";
+            
+            let compteurPenalite = setInterval(() => {
+                tempsRestant--;
+                if (tempsRestant > 0) {
+                    boutonBuzz.innerText = "PÉNALITÉ... (" + tempsRestant + "s)";
+                } else {
+                    clearInterval(compteurPenalite);
+                    boutonBuzz.innerText = "BUZZER !";
+                    boutonBuzz.style.backgroundColor = "red";
+                    boutonBuzz.disabled = false;
+                }
+            }, 1000);
+        } else {
+            boutonBuzz.innerText = "BUZZER !";
+            boutonBuzz.style.backgroundColor = "red";
+            boutonBuzz.disabled = false;
+        }
+
         démarrerChrono();
     }
 });
@@ -115,7 +152,7 @@ socket.on('prochaine_image', function(data) {
     // Reprend la valeur définie par l'admin au lieu d'un chiffre fixe
     echellePixellisation = pixelDepart; 
     
-    // ON APPLIQUE LA VRAIE IMAGE ENVOYÉE PAR LE SERVEUR
+    // Application de la nouvelle image
     imgObj.src = data.URLImage; 
     
     boutonBuzz.innerText = "BUZZER !";
@@ -135,7 +172,11 @@ socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
         item.style.padding = "5px 0";
         item.style.borderBottom = "1px solid #eee";
         item.innerHTML = "<strong>#" + (index + 1) + "</strong>. " + joueur.pseudo + " : " + joueur.score + " pts";
-        if (joueur.pseudo === monPseudo) item.style.color = "#007BFF";
+        if (joueur.pseudo === monPseudo) {
+            item.style.color = "#007BFF";
+            monScore = joueur.score; // Synchronise le score actuel
+            affichageScore.innerText = "Mon Score : " + monScore + " points";
+        }
         listeScoresUI.appendChild(item);
     });
 });
