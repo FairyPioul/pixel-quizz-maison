@@ -4,16 +4,22 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 app.use(express.static(__dirname));
 
-// Configuration de Multer : où ranger l'image et comment la nommer
+// Vérifie si le dossier 'image' existe sur Render, sinon le crée
+const dossierUpload = path.join(__dirname, 'image');
+if (!fs.existsSync(dossierUpload)) {
+    fs.mkdirSync(dossierUpload, { recursive: true });
+}
+
+// Configuration de Multer
 const stockage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'image/'); // Vos images iront dans ton dossier "image"
+        cb(null, dossierUpload);
     },
     filename: function (req, file, cb) {
-        // On donne un nom unique basé sur l'heure pour éviter les doublons
         cb(null, 'quiz-' + Date.now() + path.extname(file.originalname));
     }
 });
@@ -33,7 +39,6 @@ let listeImagesServeur = ["image/20220310210647_1.png"];
 // Route HTTP POST pour recevoir le fichier depuis l'admin
 app.post('/upload', upload.single('imageQuiz'), (req, res) => {
     if (req.file) {
-        // On ajoute le chemin de la nouvelle image dans notre liste globale
         const cheminImage = 'image/' + req.file.filename;
         listeImagesServeur.push(cheminImage);
         console.log(`-> SERVEUR : Nouvelle image ajoutée : ${cheminImage}`);
@@ -48,18 +53,27 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
 // ========================================================
 io.on('connection', (socket) => {
     console.log('Un utilisateur s’est connecté');
-// AJOUT : On envoie le classement actuel dès que quelqu'un (Joueur ou Admin) se connecte
+
+    // On envoie le classement actuel dès qu'un client (Joueur/Admin) se connecte
     socket.emit('mise_a_jour_leaderboard', listeJoueurs);
-    // 1. Quand un joueur entre son pseudo, on l'ajoute à la liste commune
+
+    // GESTION DE LA RECONNEXION INTELLIGENTE
     socket.on('nouveau_joueur', (data) => {
-        let joueurExiste = listeJoueurs.find(j => j.id === socket.id);
-        if (!joueurExiste) {
+        let ancienJoueur = listeJoueurs.find(j => j.pseudo === data.pseudo);
+
+        if (ancienJoueur) {
+            // Reconnexion : On met à jour l'ID de connexion sans réinitialiser le score
+            ancienJoueur.id = socket.id;
+            console.log(`🔄 Reconnexion : ${data.pseudo} a récupéré sa session (${ancienJoueur.score} pts).`);
+        } else {
+            // Nouveau joueur : On l'ajoute au tableau
             listeJoueurs.push({ id: socket.id, pseudo: data.pseudo, score: 0 });
+            console.log(`🆕 Nouveau joueur : ${data.pseudo}`);
         }
-        // On envoie le classement mis à jour à TOUT LE MONDE
+
         io.emit('mise_a_jour_leaderboard', listeJoueurs);
     });
-    
+
     socket.on('changement_reglages', (data) => {
         socket.broadcast.emit('maj_reglages_joueurs', data);
     });
@@ -72,22 +86,22 @@ io.on('connection', (socket) => {
         }
     });
 
-socket.on('admin_decision', (data) => {
+    socket.on('admin_decision', (data) => {
         if (data.juste) {
-            // On cherche le joueur qui a buzzé pour lui ajouter ses points sur le serveur
             let joueurGagnant = listeJoueurs.find(j => j.pseudo === pseudoDuBuzzer);
             if (joueurGagnant) {
                 joueurGagnant.score += data.pointsAAccorder;
             }
             
-            // On prévient tout le monde de révéler l'image
             io.emit('reponse_validee', { action: 'reveler', gagnant: pseudoDuBuzzer, points: data.pointsAAccorder });
-            
-            // On met à jour le leaderboard chez TOUT LE MONDE (y compris l'admin !)
             io.emit('mise_a_jour_leaderboard', listeJoueurs);
         } else {
+            const joueurEnFaute = pseudoDuBuzzer;
             mancheActive = true;
-            io.emit('reponse_validee', { action: 'relancer' });
+            pseudoDuBuzzer = "";
+
+            // Transmet le pseudo du perdant pour appliquer le cooldown de 2s
+            io.emit('reponse_validee', { action: 'relancer', perdant: joueurEnFaute });
         }
     });
 
@@ -95,21 +109,19 @@ socket.on('admin_decision', (data) => {
         mancheActive = true;
         pseudoDuBuzzer = "";
         
-        // On passe à l'image suivante dans la liste du serveur
         indexImageActuelle++;
         if (indexImageActuelle >= listeImagesServeur.length) {
-            indexImageActuelle = 0; // On boucle si on arrive au bout
+            indexImageActuelle = 0; // Boucle si on arrive à la fin de la liste
         }
 
         const prochaineImage = listeImagesServeur[indexImageActuelle];
         console.log(`-> SERVEUR : Lancement de la prochaine image : ${prochaineImage}`);
         
-        // On envoie le lien de l'image précise à afficher chez les joueurs !
         io.emit('prochaine_image', { URLImage: prochaineImage });
     });
 });
 
-// On récupère le port donné par internet, ou 3000 si on joue en local
+// Port dynamique pour le déploiement sur Render
 const PORT = process.env.PORT || 3000;
 
 http.listen(PORT, () => {
