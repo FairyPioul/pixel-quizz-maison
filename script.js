@@ -121,7 +121,7 @@ socket.on('reponse_validee', function(data) {
             boutonBuzz.disabled = true;
             boutonBuzz.style.backgroundColor = "#777";
             
-            let tempsRestant = 2;
+            let tempsRestant = 1;
             boutonBuzz.innerText = "PÉNALITÉ... (" + tempsRestant + "s)";
             
             let compteurPenalite = setInterval(() => {
