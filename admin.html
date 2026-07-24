@@ -312,6 +312,13 @@
         imgObj.onload = function() {
             dessinerImagePixelisee();
         };
+
+        // Remettre à zéro la partie
+document.getElementById('btn-reset-jeu').addEventListener('click', () => {
+    if (confirm("Es-tu sûr de vouloir effacer tous les joueurs et remettre les scores à zéro ?")) {
+        socket.emit('admin_reset_partie');
+    }
+});
     </script>
 </body>
 </html>
