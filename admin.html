@@ -127,17 +127,15 @@
                 <canvas id="canvas-admin" width="800" height="600"></canvas>
             </div>
             
-<div id="controles" style="display: none;">
-    <!-- AJOUT : Affichage géant du pseudo qui a buzzé -->
-    <h2 id="nom-buzzer" style="color: #ffc107; font-size: 26px; margin: 10px 0; text-transform: uppercase;"></h2>
-
-    <p style="font-weight: bold; color: #ddd;">Attribuer les points :</p>
-    <button class="btn-success" id="btn-p1">+ 1 Point</button>
-    <button class="btn-success" id="btn-p2">+ 2 Points</button>
-    <button class="btn-success" id="btn-p3">+ 3 Points</button>
-    <br><br>
-    <button class="btn-danger" id="btn-incorrect">Mauvaise Réponse ✗</button>
-</div>
+            <div id="controles" style="display: none; background: #333; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                <h2 id="nom-buzzer" style="color: #ffc107; font-size: 26px; margin: 0 0 10px 0; text-transform: uppercase;"></h2>
+                <p style="font-weight: bold; color: #ddd; margin-bottom: 10px;">Attribuer les points :</p>
+                <button class="btn-success" id="btn-p1">+ 1 Point</button>
+                <button class="btn-success" id="btn-p2">+ 2 Points</button>
+                <button class="btn-success" id="btn-p3">+ 3 Points</button>
+                <br><br>
+                <button class="btn-danger" id="btn-incorrect">Mauvaise Réponse ✗</button>
+            </div>
             
             <button class="btn-next" id="btn-next">Lancer l'image suivante ➔</button>
         </div>
@@ -146,10 +144,11 @@
         <div class="panneau">
             <h3>📊 Classement des Joueurs</h3>
             <ul id="liste-scores-admin"></ul>
-<br>
-<button id="btn-reset-jeu" class="btn-danger" style="width: 100%; font-size: 14px; padding: 8px;">
-    🗑️ Remettre à zéro les scores & joueurs
-</button>
+            <br>
+            <button id="btn-reset-jeu" class="btn-danger" style="width: 100%; font-size: 14px; padding: 8px;">
+                🗑️ Remettre à zéro les scores & joueurs
+            </button>
+            
             <hr style="margin: 35px 0; border-color: #444;">
 
             <h3>📁 Ajouter une nouvelle image</h3>
@@ -166,9 +165,10 @@
         const socket = io();
         const statusDiv = document.getElementById('status');
         const controlesDiv = document.getElementById('controles');
+        const nomBuzzerElem = document.getElementById('nom-buzzer');
         const listeScoresUI = document.getElementById('liste-scores-admin');
 
-        // CANVAS POUR LA CONFIGURATION DU LOGICIEL DE PIXELLISATION
+        // CANVAS POUR LA CONFIGURATION DE LA PIXELLISATION
         const canvas = document.getElementById('canvas-admin');
         const ctx = canvas.getContext('2d');
         let imgObj = new Image();
@@ -219,7 +219,12 @@
         // ÉCOUTE DES ÉVÉNEMENTS DU SERVEUR
         socket.on('bloquer_jeu', (data) => {
             clearInterval(chrono); // On fige l'image au moment du buzz
-            statusDiv.innerText = data.quiAByzze + " A BUZZÉ !";
+            statusDiv.innerText = "🔔 BUZZ DE " + data.quiAByzze.toUpperCase() + " !";
+            
+            if (nomBuzzerElem) {
+                nomBuzzerElem.innerText = "👉 " + data.quiAByzze;
+            }
+
             controlesDiv.style.display = "block";
         });
 
@@ -228,7 +233,7 @@
                 clearInterval(chrono);
                 echellePixellisation = 1;
                 ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // Découvre l'image nette
-                statusDiv.innerText = "Manche validée !";
+                statusDiv.innerText = "Manche validée ! Gagnant : " + data.gagnant;
                 controlesDiv.style.display = "none";
             } else if (data.action === 'relancer') {
                 statusDiv.innerText = "Faux ! Le jeu relance...";
@@ -252,6 +257,13 @@
         // RECEPTION ET AFFICHAGE DU CLASSEMENT DES JOUEURS
         socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
             listeScoresUI.innerHTML = "";
+            
+            if (tableauJoueurs.length === 0) {
+                statusDiv.innerText = "Partie réinitialisée ! En attente de joueurs...";
+                controlesDiv.style.display = "none";
+                return;
+            }
+
             tableauJoueurs.sort((a, b) => b.score - a.score);
             tableauJoueurs.forEach((joueur, index) => {
                 const item = document.createElement('li');
@@ -262,7 +274,7 @@
             });
         });
 
-        // ACTIONS SUR LES ACTIONS DE VALIDATION
+        // ACTIONS SUR LES BOUTONS DE VALIDATION
         function validerPoints(points) {
             socket.emit('admin_decision', { juste: true, pointsAAccorder: points });
             controlesDiv.style.display = "none";
@@ -281,7 +293,7 @@
             socket.emit('admin_next');
         });
 
-        // ENVOI DU FICHIER AU SERVEUR (TÉLÉVERSEMENT)
+        // TÉLÉVERSEMENT D'IMAGE
         document.getElementById('btn-uploader').addEventListener('click', () => {
             const selecteurFichier = document.getElementById('input-fichier');
             if (selecteurFichier.files.length === 0) {
@@ -308,17 +320,17 @@
             .catch(err => console.error("Erreur d'upload :", err));
         });
 
-        // Premier dessin de l'image d'accueil par défaut
+        // REMETTRE À ZÉRO LA PARTIE
+        document.getElementById('btn-reset-jeu').addEventListener('click', () => {
+            if (confirm("Es-tu sûr de vouloir effacer tous les joueurs et remettre les scores à zéro ?")) {
+                socket.emit('admin_reset_partie');
+            }
+        });
+
+        // Dessin initial au chargement
         imgObj.onload = function() {
             dessinerImagePixelisee();
         };
-
-        // Remettre à zéro la partie
-document.getElementById('btn-reset-jeu').addEventListener('click', () => {
-    if (confirm("Es-tu sûr de vouloir effacer tous les joueurs et remettre les scores à zéro ?")) {
-        socket.emit('admin_reset_partie');
-    }
-});
     </script>
 </body>
 </html>
