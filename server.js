@@ -72,6 +72,17 @@ io.on('connection', (socket) => {
         }
 
         io.emit('mise_a_jour_leaderboard', listeJoueurs);
+        // Remet la liste des joueurs et les scores complètement à zéro
+    socket.on('admin_reset_partie', () => {
+        listeJoueurs = []; // Vide le tableau de mémoire
+        pseudoDuBuzzer = "";
+        mancheActive = true;
+        
+        console.log("🧹 SERVEUR : Partie remise à zéro par l'Admin !");
+        
+        // Informe l'Admin et tous les joueurs que le classement est vide
+        io.emit('mise_a_jour_leaderboard', listeJoueurs);
+    });
     });
 
     socket.on('changement_reglages', (data) => {
