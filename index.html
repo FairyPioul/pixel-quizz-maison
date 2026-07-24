@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Quiz</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -18,7 +19,7 @@
             text-align: center;
         }
 
-        /* EFFET TRANSPARENT ET FLAU POUR LES ÉCRANS DE CONFIGURATION */
+        /* EFFET TRANSPARENT ET FLOU POUR LES ÉCRANS DE CONFIGURATION */
         #ecran-connexion, #ecran-jeu {
             background-color: rgba(20, 30, 45, 0.85); /* Fond sombre transparent */
             backdrop-filter: blur(5px);               /* Léger flou artistique à l'arrière */
@@ -57,22 +58,25 @@
             text-shadow: 0 1px 4px rgba(0,0,0,0.5);
         }
 
-        /* CONTENEUR DU CANVAS */
+        /* CONTENEUR DU CANVAS À TAILLE ET RATIO FIXE POUR TOUT LE MONDE */
         .image-container {
             width: 100%;
-            max-width: 650px;
+            max-width: 600px;           /* Largeur max sur PC */
+            aspect-ratio: 4 / 3;        /* Force un ratio 4:3 parfait pour tous les écrans */
             margin: 20px auto;
             border-radius: 10px;
             overflow: hidden;
             border: 3px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            background: #000;
         }
 
         canvas {
             width: 100%;
-            height: auto;
+            height: 100%;
             display: block;
-            image-rendering: pixelated;
+            object-fit: cover;          /* Évite toute déformation de l'image */
+            image-rendering: pixelated; /* Conserve des pixels nets */
         }
     </style>
 </head>
@@ -94,12 +98,12 @@
         <!-- Zone d'affichage du score en bleu néon -->
         <h2 id="affichage-score" style="color: #38b6ff; text-shadow: 0 0 10px rgba(56,182,255,0.4);">Mon Score : 0 point</h2> 
         
-        <!-- 1. IMAGE (Canvas) -->
+        <!-- 1. IMAGE (Canvas encadré) -->
         <div class="image-container">
             <canvas id="canvas-jeu" width="800" height="600"></canvas>
         </div>
 
-        <!-- 2. LE BUZZER (Placé ici avec un espacement propre) -->
+        <!-- 2. LE BUZZER (Placé sous l'image) -->
         <div style="margin: 25px 0;">
             <button id="bouton-buzz">BUZZER !</button>
         </div>
