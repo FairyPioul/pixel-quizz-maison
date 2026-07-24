@@ -166,6 +166,20 @@ socket.on('prochaine_image', function(data) {
 
 socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
     listeScoresUI.innerHTML = "";
+
+    // Si le serveur a été remis à zéro (tableau vide)
+    if (tableauJoueurs.length === 0) {
+        localStorage.removeItem('pixel_quiz_pseudo'); // Efface la mémoire locale
+        monScore = 0;
+        affichageScore.innerText = "Mon Score : 0 point";
+        
+        // Renvoie le joueur sur l'écran de connexion s'il le souhaite
+        ecranJeu.style.display = "none";
+        ecranConnexion.style.display = "block";
+        return;
+    }
+
+    // Reste de ton code de tri habituel...
     tableauJoueurs.sort((a, b) => b.score - a.score);
     tableauJoueurs.forEach((joueur, index) => {
         const item = document.createElement('li');
@@ -174,7 +188,7 @@ socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
         item.innerHTML = "<strong>#" + (index + 1) + "</strong>. " + joueur.pseudo + " : " + joueur.score + " pts";
         if (joueur.pseudo === monPseudo) {
             item.style.color = "#007BFF";
-            monScore = joueur.score; // Synchronise le score actuel
+            monScore = joueur.score;
             affichageScore.innerText = "Mon Score : " + monScore + " points";
         }
         listeScoresUI.appendChild(item);
