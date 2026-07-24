@@ -26,17 +26,17 @@ const stockage = multer.diskStorage({
 const upload = multer({ storage: stockage });
 
 // ========================================================
-// VARIABLES GLOBALES (DÉCLARÉES UNE SEULE FOIS)
+// VARIABLES GLOBALES
 // ========================================================
 let mancheActive = true;
 let pseudoDuBuzzer = "";
 let indexImageActuelle = 0;
 let listeJoueurs = []; 
 
-// Liste dynamique des images disponibles (on commence avec ton image actuelle)
+// Liste dynamique des images disponibles
 let listeImagesServeur = ["image/20220310210647_1.png"];
 
-// Route HTTP POST pour recevoir le fichier depuis l'admin
+// Route HTTP POST pour téléverser une image
 app.post('/upload', upload.single('imageQuiz'), (req, res) => {
     if (req.file) {
         const cheminImage = 'image/' + req.file.filename;
@@ -54,7 +54,7 @@ app.post('/upload', upload.single('imageQuiz'), (req, res) => {
 io.on('connection', (socket) => {
     console.log('Un utilisateur s’est connecté');
 
-    // On envoie le classement actuel dès qu'un client (Joueur/Admin) se connecte
+    // On envoie le classement actuel dès qu'un client se connecte
     socket.emit('mise_a_jour_leaderboard', listeJoueurs);
 
     // GESTION DE LA RECONNEXION INTELLIGENTE
@@ -62,27 +62,28 @@ io.on('connection', (socket) => {
         let ancienJoueur = listeJoueurs.find(j => j.pseudo === data.pseudo);
 
         if (ancienJoueur) {
-            // Reconnexion : On met à jour l'ID de connexion sans réinitialiser le score
+            // Reconnexion : mise à jour du socket.id
             ancienJoueur.id = socket.id;
-            console.log(`🔄 Reconnexion : ${data.pseudo} a récupéré sa session (${ancienJoueur.score} pts).`);
+            console.log(`🔄 Reconnexion : ${data.pseudo} (${ancienJoueur.score} pts).`);
         } else {
-            // Nouveau joueur : On l'ajoute au tableau
+            // Nouveau joueur
             listeJoueurs.push({ id: socket.id, pseudo: data.pseudo, score: 0 });
             console.log(`🆕 Nouveau joueur : ${data.pseudo}`);
         }
 
         io.emit('mise_a_jour_leaderboard', listeJoueurs);
-        // Remet la liste des joueurs et les scores complètement à zéro
+    });
+
+    // REMISE À ZÉRO DE LA PARTIE (BIEN PLACÉ ICI DÉSORMAIS)
     socket.on('admin_reset_partie', () => {
-        listeJoueurs = []; // Vide le tableau de mémoire
+        listeJoueurs = []; // On vide la liste des joueurs
         pseudoDuBuzzer = "";
         mancheActive = true;
         
         console.log("🧹 SERVEUR : Partie remise à zéro par l'Admin !");
         
-        // Informe l'Admin et tous les joueurs que le classement est vide
+        // On diffuse la liste vide à TOUT LE MONDE
         io.emit('mise_a_jour_leaderboard', listeJoueurs);
-    });
     });
 
     socket.on('changement_reglages', (data) => {
@@ -111,7 +112,7 @@ io.on('connection', (socket) => {
             mancheActive = true;
             pseudoDuBuzzer = "";
 
-            // Transmet le pseudo du perdant pour appliquer le cooldown de 2s
+            // Cooldown de 2s chez le perdant
             io.emit('reponse_validee', { action: 'relancer', perdant: joueurEnFaute });
         }
     });
@@ -122,17 +123,17 @@ io.on('connection', (socket) => {
         
         indexImageActuelle++;
         if (indexImageActuelle >= listeImagesServeur.length) {
-            indexImageActuelle = 0; // Boucle si on arrive à la fin de la liste
+            indexImageActuelle = 0;
         }
 
         const prochaineImage = listeImagesServeur[indexImageActuelle];
-        console.log(`-> SERVEUR : Lancement de la prochaine image : ${prochaineImage}`);
+        console.log(`-> SERVEUR : Lancement de l'image suivante : ${prochaineImage}`);
         
         io.emit('prochaine_image', { URLImage: prochaineImage });
     });
 });
 
-// Port dynamique pour le déploiement sur Render
+// Port dynamique pour Render
 const PORT = process.env.PORT || 3000;
 
 http.listen(PORT, () => {
