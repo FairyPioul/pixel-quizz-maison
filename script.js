@@ -9,7 +9,7 @@ const boutonBuzz = document.getElementById('bouton-buzz');
 const affichageScore = document.getElementById('affichage-score');
 const listeScoresUI = document.getElementById('liste-scores');
 
-// On récupère le canvas et son contexte de dessin
+// Canvas et contexte de dessin
 const canvas = document.getElementById('canvas-jeu');
 const ctx = canvas.getContext('2d');
 
@@ -67,7 +67,7 @@ function dessinerImagePixelisee() {
     let w = canvas.width * echellePixellisation;
     let h = canvas.height * echellePixellisation;
 
-    // Étape 1 : Dessin miniature dans le coin
+    // Étape 1 : Dessin miniature
     ctx.drawImage(imgObj, 0, 0, w, h);
 
     // Étape 2 : Étirement sur l'ensemble du canvas
@@ -77,16 +77,14 @@ function dessinerImagePixelisee() {
 function démarrerChrono() {
     clearInterval(chrono);
     chrono = setInterval(function() {
-        // Augmentation progressive selon le réglage de l'admin
         echellePixellisation = echellePixellisation + vitesseDepixellisation;
-        
         dessinerImagePixelisee();
 
         if (echellePixellisation >= 1) {
             clearInterval(chrono);
-            ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // Image nette parfaite
+            ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height);
         }
-    }, 100); // S'exécute toutes les 100ms
+    }, 100);
 }
 
 boutonBuzz.addEventListener('click', function() {
@@ -104,7 +102,7 @@ socket.on('reponse_validee', function(data) {
     if (data.action === 'reveler') {
         clearInterval(chrono);
         echellePixellisation = 1;
-        ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height); // On révèle l'image nette
+        ctx.drawImage(imgObj, 0, 0, canvas.width, canvas.height);
         
         if (data.gagnant === monPseudo) {
             monScore = monScore + data.points; 
@@ -116,12 +114,12 @@ socket.on('reponse_validee', function(data) {
             boutonBuzz.style.backgroundColor = "#555";
         }
     } else if (data.action === 'relancer') {
-        // GESTION DE LA PÉNALITÉ SI LE JOUEUR S'EST TROMPÉ
+        // GESTION DE LA PÉNALITÉ DE 2 SECONDES (CORRIGÉ : tempsRestant = 2)
         if (data.perdant === monPseudo) {
             boutonBuzz.disabled = true;
             boutonBuzz.style.backgroundColor = "#777";
             
-            let tempsRestant = 1;
+            let tempsRestant = 2;
             boutonBuzz.innerText = "PÉNALITÉ... (" + tempsRestant + "s)";
             
             let compteurPenalite = setInterval(() => {
@@ -149,10 +147,7 @@ socket.on('prochaine_image', function(data) {
     console.log("JOUEUR : Le serveur me dit de passer à l'image suivante :", data.URLImage);
     clearInterval(chrono);
     
-    // Reprend la valeur définie par l'admin au lieu d'un chiffre fixe
     echellePixellisation = pixelDepart; 
-    
-    // Application de la nouvelle image
     imgObj.src = data.URLImage; 
     
     boutonBuzz.innerText = "BUZZER !";
@@ -167,19 +162,18 @@ socket.on('prochaine_image', function(data) {
 socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
     listeScoresUI.innerHTML = "";
 
-    // Si le serveur a été remis à zéro (tableau vide)
+    // Si le serveur a été remis à zéro par l'Admin (CORRIGÉ : monPseudo = "")
     if (tableauJoueurs.length === 0) {
-        localStorage.removeItem('pixel_quiz_pseudo'); // Efface la mémoire locale
+        localStorage.removeItem('pixel_quiz_pseudo');
+        monPseudo = ""; 
         monScore = 0;
         affichageScore.innerText = "Mon Score : 0 point";
         
-        // Renvoie le joueur sur l'écran de connexion s'il le souhaite
         ecranJeu.style.display = "none";
         ecranConnexion.style.display = "block";
         return;
     }
 
-    // Reste de ton code de tri habituel...
     tableauJoueurs.sort((a, b) => b.score - a.score);
     tableauJoueurs.forEach((joueur, index) => {
         const item = document.createElement('li');
@@ -195,9 +189,7 @@ socket.on('mise_a_jour_leaderboard', function(tableauJoueurs) {
     });
 });
 
-// ========================================================
-// RECEPTION DES RÉGLAGES DE L'ADMIN EN TEMPS RÉEL
-// ========================================================
+// RECEPTION DES RÉGLAGES ADMIN EN TEMPS RÉEL
 socket.on('maj_reglages_joueurs', function(data) {
     pixelDepart = data.pixelDepart;
     vitesseDepixellisation = data.vitesse;
